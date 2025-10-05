@@ -192,6 +192,8 @@ results = await n8n_query_workflow_data(
 )
 ```
 
+For more detailed integration examples and usage patterns, see [Integration Examples](docs/INTEGRATION_EXAMPLES.md).
+
 ## Usage with Claude Desktop
 
 1. To add an ephemeral client, add the following to your `claude_desktop_config.json` file:
