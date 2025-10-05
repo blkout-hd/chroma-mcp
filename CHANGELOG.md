@@ -38,11 +38,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `chroma_sync_to_qdrant` - Sync data to Qdrant for offloading
 - `chroma_sync_to_weaviate` - Sync data to Weaviate
 - `chroma_reduce_embeddings` - Reduce embeddings dimensionality with UMAP
+- `chroma_schedule_health_check` - Schedule periodic health checks
+- `chroma_schedule_cache_cleanup` - Schedule periodic cache cleanup
+- `chroma_get_scheduled_jobs` - Get list of scheduled maintenance jobs
 
 ### Changed
 
 - Enhanced query and add operations with health monitoring and swarm tracking
 - Updated dependencies to include new features (umap-learn, weaviate-client, qdrant-client, watchdog, schedule, cryptography, psutil)
+- Main server now starts with default scheduled maintenance tasks
+- Watchdog service auto-starts for persistent clients
 
 ## [0.2.6] - 08/14/2025
 

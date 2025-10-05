@@ -889,6 +889,36 @@ if UMAP_AVAILABLE:
         reducer.n_components = n_components
         return reducer.visualize_embeddings(embeddings, labels)
 
+@mcp.tool()
+async def chroma_schedule_health_check(interval: str = "every_5_minutes") -> str:
+    """
+    Schedule periodic health checks.
+    
+    Args:
+        interval: Interval string (e.g., "every_5_minutes", "hourly", "daily")
+    """
+    scheduler = get_maintenance_scheduler()
+    job_id = scheduler.schedule_health_check(interval)
+    return f"Health check scheduled with ID: {job_id}, interval: {interval}"
+
+@mcp.tool()
+async def chroma_schedule_cache_cleanup(interval: str = "hourly") -> str:
+    """
+    Schedule periodic cache cleanup and stats logging.
+    
+    Args:
+        interval: Interval string (e.g., "hourly", "every_30_minutes", "daily")
+    """
+    scheduler = get_maintenance_scheduler()
+    job_id = scheduler.schedule_cache_cleanup(interval)
+    return f"Cache cleanup scheduled with ID: {job_id}, interval: {interval}"
+
+@mcp.tool()
+async def chroma_get_scheduled_jobs() -> List[Dict]:
+    """Get list of all scheduled maintenance jobs."""
+    scheduler = get_maintenance_scheduler()
+    return scheduler.get_scheduled_jobs()
+
 def main():
     """Entry point for the Chroma MCP server."""
     parser = create_parser()
@@ -929,6 +959,11 @@ def main():
     scheduler.start()
     print("Started maintenance scheduler")
     
+    # Schedule default maintenance tasks
+    scheduler.schedule_health_check("every_5_minutes")
+    scheduler.schedule_cache_cleanup("hourly")
+    print("Scheduled default maintenance tasks: health check (5 min), cache cleanup (hourly)")
+    
     # Initialize health monitor
     monitor = get_health_monitor()
     print("Initialized health monitor")
@@ -936,6 +971,14 @@ def main():
     # Initialize cache
     cache = get_memory_cache()
     print("Initialized memory cache")
+    
+    # Start watchdog if persistent client with data directory
+    if args.client_type == 'persistent' and args.data_dir:
+        try:
+            scheduler.start_watchdog(args.data_dir)
+            print(f"Started watchdog for {args.data_dir}")
+        except Exception as e:
+            print(f"Could not start watchdog: {e}")
     
     print(f"Advanced features ready: Cache, Health Monitoring, Auto-scaling, Swarm Tracking, Entity Mapping")
     

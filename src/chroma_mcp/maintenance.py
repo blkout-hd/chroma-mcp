@@ -41,6 +41,7 @@ class MaintenanceScheduler:
         self._jobs = []
         self._running = False
         self._scheduler_thread = None
+        self._watchdog_observer = None
     
     def schedule_task(
         self,
@@ -99,6 +100,25 @@ class MaintenanceScheduler:
         self._running = False
         if self._scheduler_thread:
             self._scheduler_thread.join(timeout=5)
+        if self._watchdog_observer:
+            self._watchdog_observer.stop()
+            self._watchdog_observer.join(timeout=5)
+    
+    def start_watchdog(self, path: str, restart_callback: Optional[Callable] = None):
+        """
+        Start file system watchdog for monitoring database changes.
+        
+        Args:
+            path: Path to monitor
+            restart_callback: Callback function to call on changes
+        """
+        if self._watchdog_observer:
+            return
+        
+        event_handler = DatabaseWatchdog(restart_callback)
+        self._watchdog_observer = Observer()
+        self._watchdog_observer.schedule(event_handler, path, recursive=False)
+        self._watchdog_observer.start()
     
     def _run_scheduler(self):
         """Run the scheduler loop."""
@@ -116,6 +136,30 @@ class MaintenanceScheduler:
             }
             for job in self._jobs
         ]
+    
+    def schedule_health_check(self, interval: str = "every_5_minutes"):
+        """Schedule periodic health checks."""
+        from .health import get_health_monitor
+        
+        def health_check_task():
+            monitor = get_health_monitor()
+            status = monitor.get_health_status()
+            if status["status"] in ["warning", "critical", "unhealthy"]:
+                print(f"Health check warning: {status['status']} - {status['issues']}")
+        
+        return self.schedule_task(health_check_task, interval)
+    
+    def schedule_cache_cleanup(self, interval: str = "hourly"):
+        """Schedule periodic cache cleanup."""
+        from .cache import get_memory_cache
+        
+        def cache_cleanup_task():
+            cache = get_memory_cache()
+            # Cleanup is automatic when accessing cache, but we can log stats
+            stats = cache.get_stats()
+            print(f"Cache stats: {stats['active_entries']} active, {stats['expired_count']} expired")
+        
+        return self.schedule_task(cache_cleanup_task, interval)
 
 
 class AutoScaler:

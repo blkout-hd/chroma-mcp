@@ -97,6 +97,9 @@ This server provides data retrieval capabilities powered by Chroma, enabling AI 
 - `chroma_sync_to_qdrant` - Sync data to Qdrant for offloading (requires Qdrant)
 - `chroma_sync_to_weaviate` - Sync data to Weaviate (requires Weaviate)
 - `chroma_reduce_embeddings` - Reduce embeddings dimensionality with UMAP (requires umap-learn)
+- `chroma_schedule_health_check` - Schedule periodic health checks
+- `chroma_schedule_cache_cleanup` - Schedule periodic cache cleanup
+- `chroma_get_scheduled_jobs` - Get list of scheduled maintenance jobs
 
 ### Embedding Functions
 Chroma MCP supports several embedding functions: `default`, `cohere`, `openai`, `jina`, `voyageai`, and `roboflow`.
