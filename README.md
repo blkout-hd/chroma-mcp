@@ -54,6 +54,7 @@ This server provides data retrieval capabilities powered by Chroma, enabling AI 
 
 ### Supported Tools
 
+#### Collection Management
 - `chroma_list_collections` - List all collections with pagination support
 - `chroma_create_collection` - Create a new collection with optional HNSW configuration
 - `chroma_peek_collection` - View a sample of documents in a collection
@@ -61,11 +62,32 @@ This server provides data retrieval capabilities powered by Chroma, enabling AI 
 - `chroma_get_collection_count` - Get the number of documents in a collection
 - `chroma_modify_collection` - Update a collection's name or metadata
 - `chroma_delete_collection` - Delete a collection
+
+#### Document Operations
 - `chroma_add_documents` - Add documents with optional metadata and custom IDs
 - `chroma_query_documents` - Query documents using semantic search with advanced filtering
 - `chroma_get_documents` - Retrieve documents by IDs or filters with pagination
 - `chroma_update_documents` - Update existing documents' content, metadata, or embeddings
 - `chroma_delete_documents` - Delete specific documents from a collection
+
+#### Framework Integrations
+
+**LangGraph Integration** - Stateful multi-actor application support
+- `langgraph_save_state` - Save LangGraph state for persistence
+- `langgraph_load_state` - Load saved LangGraph state
+
+**LlamaCodex Integration** - Code-related LLM tools
+- `llamacodex_store_code` - Store code snippets with semantic indexing
+- `llamacodex_search_code` - Search code using natural language or code queries
+
+**CrewAI Integration** - Multi-agent coordination and memory
+- `crewai_store_agent_memory` - Store agent memories and experiences
+- `crewai_retrieve_agent_memories` - Retrieve agent memories with semantic search
+
+**n8n Integration** - Workflow automation extensibility
+- `n8n_store_workflow_state` - Store workflow execution state
+- `n8n_load_workflow_state` - Load workflow state
+- `n8n_query_workflow_data` - Query workflow data semantically
 
 ### Embedding Functions
 Chroma MCP supports several embedding functions: `default`, `cohere`, `openai`, `jina`, `voyageai`, and `roboflow`.
@@ -73,6 +95,102 @@ Chroma MCP supports several embedding functions: `default`, `cohere`, `openai`, 
 The embedding functions utilize Chroma's collection configuration, which persists the selected embedding function of a collection for retrieval. Once a collection is created using the collection configuration, on retrieval for future queries and inserts, the same embedding function will be used, without needing to specify the embedding function again. Embedding function persistance was added in v1.0.0 of Chroma, so if you created a collection using version <=0.6.3, this feature is not supported.
 
 When accessing embedding functions that utilize external APIs, please be sure to add the environment variable for the API key with the correct format, found in [Embedding Function Environment Variables](#embedding-function-environment-variables)
+
+### Framework Integrations
+
+Chroma MCP now includes extensibility support for popular AI frameworks and workflow tools:
+
+#### LangGraph Integration
+[LangGraph](https://github.com/langchain-ai/langgraph) enables building stateful, multi-actor applications with LLMs. The Chroma MCP integration provides:
+- Persistent state storage for graph workflows
+- Checkpoint management for graph execution
+- Memory persistence across graph runs
+
+Example usage:
+```python
+# Save graph state
+await langgraph_save_state(
+    graph_id="my_workflow",
+    state={"current_node": "analysis", "data": {"results": []}},
+    metadata={"user": "alice"}
+)
+
+# Load graph state
+state = await langgraph_load_state(graph_id="my_workflow")
+```
+
+#### LlamaCodex Integration
+Code-focused LLM integration for storing and retrieving code with semantic search:
+- Store code snippets with language metadata
+- Search code using natural language queries
+- Find similar code patterns
+
+Example usage:
+```python
+# Store code snippet
+await llamacodex_store_code(
+    code_id="auth_function",
+    code="def authenticate(user, password):\n    return verify_credentials(user, password)",
+    language="python",
+    metadata={"file": "auth.py", "author": "dev_team"}
+)
+
+# Search for code
+results = await llamacodex_search_code(
+    query="authentication function",
+    language="python",
+    n_results=5
+)
+```
+
+#### CrewAI Integration
+[CrewAI](https://github.com/joaomdmoura/crewAI) orchestrates role-playing AI agents. The integration provides:
+- Agent memory persistence
+- Multi-agent conversation history
+- Task and goal tracking
+- Knowledge sharing across agents
+
+Example usage:
+```python
+# Store agent memory
+await crewai_store_agent_memory(
+    agent_id="researcher_agent",
+    memory_content="Found relevant documentation on API patterns",
+    memory_type="knowledge",
+    metadata={"task_id": "research_123"}
+)
+
+# Retrieve agent memories
+memories = await crewai_retrieve_agent_memories(
+    agent_id="researcher_agent",
+    query="API documentation",
+    n_results=10
+)
+```
+
+#### n8n Integration
+[n8n](https://n8n.io/) workflow automation integration enables:
+- Workflow state persistence
+- Data storage from workflow nodes
+- Semantic search across workflow data
+- Custom workflow triggers
+
+Example usage:
+```python
+# Store workflow state
+await n8n_store_workflow_state(
+    workflow_id="data_pipeline_1",
+    state={"step": 3, "processed": 150},
+    metadata={"run_id": "run_456"}
+)
+
+# Query workflow data
+results = await n8n_query_workflow_data(
+    query="customer email data",
+    workflow_id="data_pipeline_1",
+    n_results=10
+)
+```
 
 ## Usage with Claude Desktop
 

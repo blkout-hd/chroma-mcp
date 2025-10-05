@@ -26,6 +26,14 @@ from chromadb.utils.embedding_functions import (
     RoboflowEmbeddingFunction,
 )
 
+# Import integration adapters
+from chroma_mcp.integrations import (
+    LangGraphAdapter,
+    LlamaCodexAdapter,
+    CrewAIAdapter,
+    N8NAdapter
+)
+
 # Initialize FastMCP server
 mcp = FastMCP("chroma")
 
@@ -629,6 +637,195 @@ def validate_thought_data(input_data: Dict) -> Dict:
         "branchId": input_data.get("branchId"),
         "needsMoreThoughts": input_data.get("needsMoreThoughts"),
     }
+
+##### Integration Tools #####
+
+@mcp.tool()
+async def langgraph_save_state(
+    graph_id: str,
+    state: Dict,
+    metadata: Dict | None = None
+) -> str:
+    """Save LangGraph state to Chroma for persistence.
+    
+    Args:
+        graph_id: Unique identifier for the graph
+        state: The state dictionary to save
+        metadata: Optional metadata about the state
+    """
+    client = get_chroma_client()
+    adapter = LangGraphAdapter(client)
+    try:
+        result = adapter.save_graph_state(graph_id, state, metadata)
+        return f"Successfully saved LangGraph state for graph '{graph_id}'"
+    except Exception as e:
+        raise Exception(f"Failed to save LangGraph state: {str(e)}") from e
+
+@mcp.tool()
+async def langgraph_load_state(graph_id: str) -> Dict | None:
+    """Load LangGraph state from Chroma.
+    
+    Args:
+        graph_id: The ID of the graph state to load
+    """
+    client = get_chroma_client()
+    adapter = LangGraphAdapter(client)
+    try:
+        state = adapter.load_graph_state(graph_id)
+        if state is None:
+            return {"message": f"No state found for graph '{graph_id}'"}
+        return state
+    except Exception as e:
+        raise Exception(f"Failed to load LangGraph state: {str(e)}") from e
+
+@mcp.tool()
+async def llamacodex_store_code(
+    code_id: str,
+    code: str,
+    language: str,
+    metadata: Dict | None = None
+) -> str:
+    """Store code snippet in Chroma for semantic code search.
+    
+    Args:
+        code_id: Unique identifier for the code snippet
+        code: The code content
+        language: Programming language (e.g., python, javascript, java)
+        metadata: Optional metadata (file path, author, etc.)
+    """
+    client = get_chroma_client()
+    adapter = LlamaCodexAdapter(client)
+    try:
+        result = adapter.store_code_snippet(code_id, code, language, metadata)
+        return f"Successfully stored code snippet '{code_id}' ({language})"
+    except Exception as e:
+        raise Exception(f"Failed to store code snippet: {str(e)}") from e
+
+@mcp.tool()
+async def llamacodex_search_code(
+    query: str,
+    language: str | None = None,
+    n_results: int = 5
+) -> List[Dict]:
+    """Search for code snippets using natural language or code queries.
+    
+    Args:
+        query: Natural language or code query
+        language: Optional language filter (e.g., python, javascript)
+        n_results: Number of results to return (default: 5)
+    """
+    client = get_chroma_client()
+    adapter = LlamaCodexAdapter(client)
+    try:
+        results = adapter.search_code(query, language, n_results)
+        return results
+    except Exception as e:
+        raise Exception(f"Failed to search code: {str(e)}") from e
+
+@mcp.tool()
+async def crewai_store_agent_memory(
+    agent_id: str,
+    memory_content: str,
+    memory_type: str = "experience",
+    metadata: Dict | None = None
+) -> str:
+    """Store agent memory for CrewAI agents.
+    
+    Args:
+        agent_id: Unique identifier for the agent
+        memory_content: The memory content
+        memory_type: Type of memory (experience, knowledge, conversation, etc.)
+        metadata: Optional metadata
+    """
+    client = get_chroma_client()
+    adapter = CrewAIAdapter(client)
+    try:
+        result = adapter.store_agent_memory(agent_id, memory_content, memory_type, metadata)
+        return f"Successfully stored memory for agent '{agent_id}' (type: {memory_type})"
+    except Exception as e:
+        raise Exception(f"Failed to store agent memory: {str(e)}") from e
+
+@mcp.tool()
+async def crewai_retrieve_agent_memories(
+    agent_id: str,
+    query: str | None = None,
+    memory_type: str | None = None,
+    n_results: int = 10
+) -> List[Dict]:
+    """Retrieve memories for a CrewAI agent.
+    
+    Args:
+        agent_id: The agent identifier
+        query: Optional semantic query for memory retrieval
+        memory_type: Optional filter by memory type
+        n_results: Number of memories to retrieve (default: 10)
+    """
+    client = get_chroma_client()
+    adapter = CrewAIAdapter(client)
+    try:
+        memories = adapter.retrieve_agent_memories(agent_id, query, memory_type, n_results)
+        return memories
+    except Exception as e:
+        raise Exception(f"Failed to retrieve agent memories: {str(e)}") from e
+
+@mcp.tool()
+async def n8n_store_workflow_state(
+    workflow_id: str,
+    state: Dict,
+    metadata: Dict | None = None
+) -> str:
+    """Store n8n workflow state in Chroma.
+    
+    Args:
+        workflow_id: Unique workflow identifier
+        state: Workflow state data
+        metadata: Optional metadata
+    """
+    client = get_chroma_client()
+    adapter = N8NAdapter(client)
+    try:
+        result = adapter.store_workflow_state(workflow_id, state, metadata)
+        return f"Successfully stored workflow state for '{workflow_id}'"
+    except Exception as e:
+        raise Exception(f"Failed to store workflow state: {str(e)}") from e
+
+@mcp.tool()
+async def n8n_load_workflow_state(workflow_id: str) -> Dict | None:
+    """Load n8n workflow state from Chroma.
+    
+    Args:
+        workflow_id: The workflow identifier
+    """
+    client = get_chroma_client()
+    adapter = N8NAdapter(client)
+    try:
+        state = adapter.load_workflow_state(workflow_id)
+        if state is None:
+            return {"message": f"No state found for workflow '{workflow_id}'"}
+        return state
+    except Exception as e:
+        raise Exception(f"Failed to load workflow state: {str(e)}") from e
+
+@mcp.tool()
+async def n8n_query_workflow_data(
+    query: str,
+    workflow_id: str | None = None,
+    n_results: int = 10
+) -> List[Dict]:
+    """Query workflow data using semantic search.
+    
+    Args:
+        query: Query string
+        workflow_id: Optional workflow filter
+        n_results: Number of results to return (default: 10)
+    """
+    client = get_chroma_client()
+    adapter = N8NAdapter(client)
+    try:
+        results = adapter.query_workflow_data(query, workflow_id, n_results)
+        return results
+    except Exception as e:
+        raise Exception(f"Failed to query workflow data: {str(e)}") from e
 
 def main():
     """Entry point for the Chroma MCP server."""
