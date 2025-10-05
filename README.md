@@ -108,6 +108,32 @@ The embedding functions utilize Chroma's collection configuration, which persist
 
 When accessing embedding functions that utilize external APIs, please be sure to add the environment variable for the API key with the correct format, found in [Embedding Function Environment Variables](#embedding-function-environment-variables)
 
+## Installation
+
+### Basic Installation
+
+```bash
+pip install chroma-mcp
+```
+
+### Optional Dependencies
+
+The advanced features require additional dependencies. Install them as needed:
+
+```bash
+# For UMAP dimensionality reduction
+pip install umap-learn
+
+# For Weaviate interoperability
+pip install weaviate-client
+
+# For Qdrant interoperability
+pip install qdrant-client
+
+# All optional dependencies are included in the base package
+# They will be available if the respective services are configured
+```
+
 ## Usage with Claude Desktop
 
 1. To add an ephemeral client, add the following to your `claude_desktop_config.json` file:
@@ -234,4 +260,158 @@ export WEAVIATE_API_KEY="your-weaviate-api-key"
 export QDRANT_URL="http://localhost:6333"
 export QDRANT_API_KEY="your-qdrant-api-key"
 ```
+
+## Advanced Features Usage
+
+### Passive Memory Cache
+
+The cache layer provides short-term memory capabilities without requiring explicit commits to the database:
+
+```python
+# Cache a query result (automatically done during queries)
+# Manual caching:
+await chroma_cache_query(
+    collection_name="my_collection",
+    query="search term",
+    project_id="my_project",  # Optional: isolate by project
+    ttl=3600  # Time to live in seconds
+)
+
+# Get cache statistics
+stats = await chroma_get_cache_stats(project_id="my_project")
+```
+
+### Health Monitoring and Auto-scaling
+
+Monitor system health and get intelligent scaling recommendations:
+
+```python
+# Get health status
+health = await chroma_health_check()
+# Returns: status, uptime, metrics, system resources, issues
+
+# Get scaling recommendations
+recommendations = await chroma_get_scaling_recommendation()
+# Returns: scale_up/down suggestions based on metrics
+```
+
+### Swarm Tracking and Code Smells
+
+Track operation patterns and detect inefficiencies:
+
+```python
+# Get hot trails (frequently accessed patterns)
+hot_trails = await chroma_get_hot_trails(min_strength=0.5, limit=10)
+
+# Get code smell report
+smells = await chroma_get_code_smells()
+# Detects: excessive queries, large batches, inefficient filters
+```
+
+### Selective Encryption
+
+Automatically detect and encrypt sensitive information:
+
+```python
+# Encrypt documents based on sensitive data detection
+result = await chroma_encrypt_documents(
+    documents=["contact: john@example.com", "normal text"],
+    metadatas=[{"type": "contact"}, {"type": "note"}],
+    project_id="my_project"
+)
+# Automatically encrypts documents with emails, SSNs, API keys, etc.
+```
+
+### Entity Relationship Mapping
+
+Track entities and their relationships:
+
+```python
+# Add entities
+await chroma_add_entity(
+    entity_id="user1",
+    entity_type="User",
+    properties={"name": "Alice", "role": "admin"}
+)
+
+# Add relationships
+await chroma_add_relationship(
+    relationship_id="follows1",
+    source_id="user1",
+    target_id="user2",
+    relationship_type="FOLLOWS"
+)
+
+# Find path between entities
+path = await chroma_find_entity_path(
+    source_id="user1",
+    target_id="user5",
+    max_depth=5
+)
+
+# Get graph statistics
+stats = await chroma_get_graph_stats()
+```
+
+### Interoperability with Weaviate and Qdrant
+
+Sync data to other vector databases:
+
+```python
+# Sync to Qdrant for load balancing
+await chroma_sync_to_qdrant(
+    collection_name="my_collection",
+    documents=docs,
+    embeddings=embeddings,
+    metadatas=metas,
+    ids=ids
+)
+
+# Sync to Weaviate
+await chroma_sync_to_weaviate(
+    collection_name="my_collection",
+    documents=docs,
+    embeddings=embeddings
+)
+```
+
+### UMAP Dimensionality Reduction
+
+Visualize embeddings in 2D or 3D:
+
+```python
+# Reduce embeddings for visualization
+result = await chroma_reduce_embeddings(
+    embeddings=embeddings_list,
+    n_components=2,  # 2D for visualization
+    labels=["doc1", "doc2", "doc3"]
+)
+# Returns: coordinates for plotting
+```
+
+### Scheduled Maintenance
+
+Schedule autonomous maintenance tasks:
+
+```python
+# Schedule health checks
+await chroma_schedule_health_check(interval="every_5_minutes")
+
+# Schedule cache cleanup
+await chroma_schedule_cache_cleanup(interval="hourly")
+
+# Get scheduled jobs
+jobs = await chroma_get_scheduled_jobs()
+```
+
+## Automatic Features
+
+The following features are automatically enabled when the server starts:
+
+- **Health monitoring**: Tracks queries, inserts, errors, and system metrics
+- **Swarm tracking**: Records operation patterns and pheromone trails
+- **Code smell detection**: Analyzes operations for anti-patterns
+- **Default maintenance**: Health checks every 5 minutes, cache cleanup hourly
+- **Watchdog service**: Auto-monitors persistent database directories (when using persistent client)
+
 
