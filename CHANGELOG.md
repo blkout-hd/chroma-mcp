@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - TBD
+
+### Added
+
+- **LangGraph Integration**: Support for stateful multi-actor applications
+  - `langgraph_save_state` tool for persistent state storage
+  - `langgraph_load_state` tool for state retrieval
+  - State management with checkpoint support
+  
+- **LlamaCodex Integration**: Code-related LLM tools
+  - `llamacodex_store_code` tool for code snippet storage
+  - `llamacodex_search_code` tool for semantic code search
+  - Language-specific filtering and metadata support
+  
+- **CrewAI Integration**: Multi-agent coordination and memory
+  - `crewai_store_agent_memory` tool for agent memory persistence
+  - `crewai_retrieve_agent_memories` tool for memory retrieval
+  - Support for different memory types (experience, knowledge, conversation)
+  
+- **n8n Integration**: Workflow automation extensibility
+  - `n8n_store_workflow_state` tool for workflow state persistence
+  - `n8n_load_workflow_state` tool for state retrieval
+  - `n8n_query_workflow_data` tool for semantic workflow data search
+  - Data transformation utilities for n8n compatibility
+
+- Integration adapters module (`chroma_mcp.integrations`) with specialized classes:
+  - `LangGraphAdapter` for graph state management
+  - `LlamaCodexAdapter` for code storage and retrieval
+  - `CrewAIAdapter` for agent memory and coordination
+  - `N8NAdapter` for workflow automation support
+
+### Changed
+
+- Enhanced documentation with integration examples and use cases
+- Improved server architecture to support extensibility
+
 ## [0.2.6] - 08/14/2025
 
 - Update chromadb to 1.0.16
