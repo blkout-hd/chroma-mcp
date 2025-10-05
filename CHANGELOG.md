@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **UMAP Integration**: Dimensionality reduction and visualization capabilities for embeddings
+- **Weaviate Interoperability**: Seamless data synchronization with Weaviate vector database
+- **Qdrant Interoperability**: Data offloading and load balancing with Qdrant
+- **Passive Memory Cache**: Short-term memory cache layer for operations without explicit commit to database
+- **Autonomous Maintenance**: Scheduled maintenance tasks and cron job support
+- **Health Checking**: Comprehensive health monitoring and system metrics
+- **Entity Relationship Mapping**: Graph-based entity and relationship tracking
+- **Intelligent Auto-scaling**: Adaptive scaling recommendations based on ecosystem metrics
+- **Swarm Pheromone Tracking**: Pattern tracking for frequently accessed operations
+- **Code Smell Monitoring**: Detection of anti-patterns and inefficient operations
+- **Selective Encryption**: Algorithmic detection and encryption of sensitive information
+- **Watchdog Service**: Auto-restart capabilities for cloud database connections
+
+### Tools Added
+
+- `chroma_cache_query` - Cache queries for passive short-term memory
+- `chroma_get_cache_stats` - Get cache statistics
+- `chroma_health_check` - Get comprehensive health status
+- `chroma_get_scaling_recommendation` - Get intelligent scaling recommendations
+- `chroma_get_hot_trails` - Get frequently accessed operation patterns
+- `chroma_get_code_smells` - Get code smell detection report
+- `chroma_encrypt_documents` - Selectively encrypt documents based on sensitive data detection
+- `chroma_add_entity` - Add entity to relationship graph
+- `chroma_add_relationship` - Add relationship between entities
+- `chroma_get_graph_stats` - Get entity relationship graph statistics
+- `chroma_find_entity_path` - Find path between entities
+- `chroma_sync_to_qdrant` - Sync data to Qdrant for offloading
+- `chroma_sync_to_weaviate` - Sync data to Weaviate
+- `chroma_reduce_embeddings` - Reduce embeddings dimensionality with UMAP
+
+### Changed
+
+- Enhanced query and add operations with health monitoring and swarm tracking
+- Updated dependencies to include new features (umap-learn, weaviate-client, qdrant-client, watchdog, schedule, cryptography, psutil)
+
 ## [0.2.6] - 08/14/2025
 
 - Update chromadb to 1.0.16

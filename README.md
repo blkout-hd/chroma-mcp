@@ -52,8 +52,21 @@ This server provides data retrieval capabilities powered by Chroma, enabling AI 
   - Retrieve documents by IDs or filters
   - Full text search capabilities
 
+- **Advanced Features**
+  - **UMAP Integration**: Dimensionality reduction and visualization of embeddings
+  - **Weaviate & Qdrant Interoperability**: Seamless data synchronization and offloading
+  - **Passive Memory Cache**: Short-term memory without explicit database commits
+  - **Health Monitoring**: Real-time system metrics and health checks
+  - **Auto-scaling**: Intelligent scaling recommendations based on workload
+  - **Swarm Tracking**: Pattern detection for frequently accessed operations
+  - **Code Smell Detection**: Identifies anti-patterns and inefficient operations
+  - **Selective Encryption**: Automatic detection and encryption of sensitive data
+  - **Entity Relationship Mapping**: Graph-based entity and relationship tracking
+  - **Autonomous Maintenance**: Scheduled tasks and watchdog services
+
 ### Supported Tools
 
+#### Core Collection Tools
 - `chroma_list_collections` - List all collections with pagination support
 - `chroma_create_collection` - Create a new collection with optional HNSW configuration
 - `chroma_peek_collection` - View a sample of documents in a collection
@@ -61,11 +74,29 @@ This server provides data retrieval capabilities powered by Chroma, enabling AI 
 - `chroma_get_collection_count` - Get the number of documents in a collection
 - `chroma_modify_collection` - Update a collection's name or metadata
 - `chroma_delete_collection` - Delete a collection
+
+#### Document Tools
 - `chroma_add_documents` - Add documents with optional metadata and custom IDs
 - `chroma_query_documents` - Query documents using semantic search with advanced filtering
 - `chroma_get_documents` - Retrieve documents by IDs or filters with pagination
 - `chroma_update_documents` - Update existing documents' content, metadata, or embeddings
 - `chroma_delete_documents` - Delete specific documents from a collection
+
+#### Advanced Feature Tools
+- `chroma_cache_query` - Cache queries for passive short-term memory
+- `chroma_get_cache_stats` - Get cache statistics
+- `chroma_health_check` - Get comprehensive health status
+- `chroma_get_scaling_recommendation` - Get intelligent scaling recommendations
+- `chroma_get_hot_trails` - Get frequently accessed operation patterns
+- `chroma_get_code_smells` - Get code smell detection report
+- `chroma_encrypt_documents` - Selectively encrypt documents based on sensitive data
+- `chroma_add_entity` - Add entity to relationship graph
+- `chroma_add_relationship` - Add relationship between entities
+- `chroma_get_graph_stats` - Get entity relationship graph statistics
+- `chroma_find_entity_path` - Find path between entities
+- `chroma_sync_to_qdrant` - Sync data to Qdrant for offloading (requires Qdrant)
+- `chroma_sync_to_weaviate` - Sync data to Weaviate (requires Weaviate)
+- `chroma_reduce_embeddings` - Reduce embeddings dimensionality with UMAP (requires umap-learn)
 
 ### Embedding Functions
 Chroma MCP supports several embedding functions: `default`, `cohere`, `openai`, `jina`, `voyageai`, and `roboflow`.
@@ -185,3 +216,19 @@ export CHROMA_DOTENV_PATH="/path/to/your/.env"
 When using external embedding functions that access an API key, follow the naming convention
 `CHROMA_<>_API_KEY="<key>"`.
 So to set a Cohere API key, set the environment variable `CHROMA_COHERE_API_KEY=""`. We recommend adding this to a .env file somewhere and using the `CHROMA_DOTENV_PATH` environment variable or `--dotenv-path` flag to set that location for safekeeping.
+
+#### Advanced Features Environment Variables
+
+```bash
+# Encryption
+export ENCRYPTION_PASSWORD="your-secure-password"
+
+# Weaviate Interoperability
+export WEAVIATE_URL="http://localhost:8080"
+export WEAVIATE_API_KEY="your-weaviate-api-key"
+
+# Qdrant Interoperability
+export QDRANT_URL="http://localhost:6333"
+export QDRANT_API_KEY="your-qdrant-api-key"
+```
+
