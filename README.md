@@ -52,9 +52,21 @@ This server provides data retrieval capabilities powered by Chroma, enabling AI 
   - Retrieve documents by IDs or filters
   - Full text search capabilities
 
+- **Advanced Features**
+  - **UMAP Integration**: Dimensionality reduction and visualization of embeddings
+  - **Weaviate & Qdrant Interoperability**: Seamless data synchronization and offloading
+  - **Passive Memory Cache**: Short-term memory without explicit database commits
+  - **Health Monitoring**: Real-time system metrics and health checks
+  - **Auto-scaling**: Intelligent scaling recommendations based on workload
+  - **Swarm Tracking**: Pattern detection for frequently accessed operations
+  - **Code Smell Detection**: Identifies anti-patterns and inefficient operations
+  - **Selective Encryption**: Automatic detection and encryption of sensitive data
+  - **Entity Relationship Mapping**: Graph-based entity and relationship tracking
+  - **Autonomous Maintenance**: Scheduled tasks and watchdog services
+
 ### Supported Tools
 
-#### Collection Management
+#### Core Collection Tools
 - `chroma_list_collections` - List all collections with pagination support
 - `chroma_create_collection` - Create a new collection with optional HNSW configuration
 - `chroma_peek_collection` - View a sample of documents in a collection
@@ -63,31 +75,31 @@ This server provides data retrieval capabilities powered by Chroma, enabling AI 
 - `chroma_modify_collection` - Update a collection's name or metadata
 - `chroma_delete_collection` - Delete a collection
 
-#### Document Operations
+#### Document Tools
 - `chroma_add_documents` - Add documents with optional metadata and custom IDs
 - `chroma_query_documents` - Query documents using semantic search with advanced filtering
 - `chroma_get_documents` - Retrieve documents by IDs or filters with pagination
 - `chroma_update_documents` - Update existing documents' content, metadata, or embeddings
 - `chroma_delete_documents` - Delete specific documents from a collection
 
-#### Framework Integrations
-
-**LangGraph Integration** - Stateful multi-actor application support
-- `langgraph_save_state` - Save LangGraph state for persistence
-- `langgraph_load_state` - Load saved LangGraph state
-
-**LlamaCodex Integration** - Code-related LLM tools
-- `llamacodex_store_code` - Store code snippets with semantic indexing
-- `llamacodex_search_code` - Search code using natural language or code queries
-
-**CrewAI Integration** - Multi-agent coordination and memory
-- `crewai_store_agent_memory` - Store agent memories and experiences
-- `crewai_retrieve_agent_memories` - Retrieve agent memories with semantic search
-
-**n8n Integration** - Workflow automation extensibility
-- `n8n_store_workflow_state` - Store workflow execution state
-- `n8n_load_workflow_state` - Load workflow state
-- `n8n_query_workflow_data` - Query workflow data semantically
+#### Advanced Feature Tools
+- `chroma_cache_query` - Cache queries for passive short-term memory
+- `chroma_get_cache_stats` - Get cache statistics
+- `chroma_health_check` - Get comprehensive health status
+- `chroma_get_scaling_recommendation` - Get intelligent scaling recommendations
+- `chroma_get_hot_trails` - Get frequently accessed operation patterns
+- `chroma_get_code_smells` - Get code smell detection report
+- `chroma_encrypt_documents` - Selectively encrypt documents based on sensitive data
+- `chroma_add_entity` - Add entity to relationship graph
+- `chroma_add_relationship` - Add relationship between entities
+- `chroma_get_graph_stats` - Get entity relationship graph statistics
+- `chroma_find_entity_path` - Find path between entities
+- `chroma_sync_to_qdrant` - Sync data to Qdrant for offloading (requires Qdrant)
+- `chroma_sync_to_weaviate` - Sync data to Weaviate (requires Weaviate)
+- `chroma_reduce_embeddings` - Reduce embeddings dimensionality with UMAP (requires umap-learn)
+- `chroma_schedule_health_check` - Schedule periodic health checks
+- `chroma_schedule_cache_cleanup` - Schedule periodic cache cleanup
+- `chroma_get_scheduled_jobs` - Get list of scheduled maintenance jobs
 
 ### Embedding Functions
 Chroma MCP supports several embedding functions: `default`, `cohere`, `openai`, `jina`, `voyageai`, and `roboflow`.
@@ -96,103 +108,31 @@ The embedding functions utilize Chroma's collection configuration, which persist
 
 When accessing embedding functions that utilize external APIs, please be sure to add the environment variable for the API key with the correct format, found in [Embedding Function Environment Variables](#embedding-function-environment-variables)
 
-### Framework Integrations
+## Installation
 
-Chroma MCP now includes extensibility support for popular AI frameworks and workflow tools:
+### Basic Installation
 
-#### LangGraph Integration
-[LangGraph](https://github.com/langchain-ai/langgraph) enables building stateful, multi-actor applications with LLMs. The Chroma MCP integration provides:
-- Persistent state storage for graph workflows
-- Checkpoint management for graph execution
-- Memory persistence across graph runs
-
-Example usage:
-```python
-# Save graph state
-await langgraph_save_state(
-    graph_id="my_workflow",
-    state={"current_node": "analysis", "data": {"results": []}},
-    metadata={"user": "alice"}
-)
-
-# Load graph state
-state = await langgraph_load_state(graph_id="my_workflow")
+```bash
+pip install chroma-mcp
 ```
 
-#### LlamaCodex Integration
-Code-focused LLM integration for storing and retrieving code with semantic search:
-- Store code snippets with language metadata
-- Search code using natural language queries
-- Find similar code patterns
+### Optional Dependencies
 
-Example usage:
-```python
-# Store code snippet
-await llamacodex_store_code(
-    code_id="auth_function",
-    code="def authenticate(user, password):\n    return verify_credentials(user, password)",
-    language="python",
-    metadata={"file": "auth.py", "author": "dev_team"}
-)
+The advanced features require additional dependencies. Install them as needed:
 
-# Search for code
-results = await llamacodex_search_code(
-    query="authentication function",
-    language="python",
-    n_results=5
-)
+```bash
+# For UMAP dimensionality reduction
+pip install umap-learn
+
+# For Weaviate interoperability
+pip install weaviate-client
+
+# For Qdrant interoperability
+pip install qdrant-client
+
+# All optional dependencies are included in the base package
+# They will be available if the respective services are configured
 ```
-
-#### CrewAI Integration
-[CrewAI](https://github.com/joaomdmoura/crewAI) orchestrates role-playing AI agents. The integration provides:
-- Agent memory persistence
-- Multi-agent conversation history
-- Task and goal tracking
-- Knowledge sharing across agents
-
-Example usage:
-```python
-# Store agent memory
-await crewai_store_agent_memory(
-    agent_id="researcher_agent",
-    memory_content="Found relevant documentation on API patterns",
-    memory_type="knowledge",
-    metadata={"task_id": "research_123"}
-)
-
-# Retrieve agent memories
-memories = await crewai_retrieve_agent_memories(
-    agent_id="researcher_agent",
-    query="API documentation",
-    n_results=10
-)
-```
-
-#### n8n Integration
-[n8n](https://n8n.io/) workflow automation integration enables:
-- Workflow state persistence
-- Data storage from workflow nodes
-- Semantic search across workflow data
-- Custom workflow triggers
-
-Example usage:
-```python
-# Store workflow state
-await n8n_store_workflow_state(
-    workflow_id="data_pipeline_1",
-    state={"step": 3, "processed": 150},
-    metadata={"run_id": "run_456"}
-)
-
-# Query workflow data
-results = await n8n_query_workflow_data(
-    query="customer email data",
-    workflow_id="data_pipeline_1",
-    n_results=10
-)
-```
-
-For more detailed integration examples and usage patterns, see [Integration Examples](docs/INTEGRATION_EXAMPLES.md).
 
 ## Usage with Claude Desktop
 
@@ -305,3 +245,173 @@ export CHROMA_DOTENV_PATH="/path/to/your/.env"
 When using external embedding functions that access an API key, follow the naming convention
 `CHROMA_<>_API_KEY="<key>"`.
 So to set a Cohere API key, set the environment variable `CHROMA_COHERE_API_KEY=""`. We recommend adding this to a .env file somewhere and using the `CHROMA_DOTENV_PATH` environment variable or `--dotenv-path` flag to set that location for safekeeping.
+
+#### Advanced Features Environment Variables
+
+```bash
+# Encryption
+export ENCRYPTION_PASSWORD="your-secure-password"
+
+# Weaviate Interoperability
+export WEAVIATE_URL="http://localhost:8080"
+export WEAVIATE_API_KEY="your-weaviate-api-key"
+
+# Qdrant Interoperability
+export QDRANT_URL="http://localhost:6333"
+export QDRANT_API_KEY="your-qdrant-api-key"
+```
+
+## Advanced Features Usage
+
+### Passive Memory Cache
+
+The cache layer provides short-term memory capabilities without requiring explicit commits to the database:
+
+```python
+# Cache a query result (automatically done during queries)
+# Manual caching:
+await chroma_cache_query(
+    collection_name="my_collection",
+    query="search term",
+    project_id="my_project",  # Optional: isolate by project
+    ttl=3600  # Time to live in seconds
+)
+
+# Get cache statistics
+stats = await chroma_get_cache_stats(project_id="my_project")
+```
+
+### Health Monitoring and Auto-scaling
+
+Monitor system health and get intelligent scaling recommendations:
+
+```python
+# Get health status
+health = await chroma_health_check()
+# Returns: status, uptime, metrics, system resources, issues
+
+# Get scaling recommendations
+recommendations = await chroma_get_scaling_recommendation()
+# Returns: scale_up/down suggestions based on metrics
+```
+
+### Swarm Tracking and Code Smells
+
+Track operation patterns and detect inefficiencies:
+
+```python
+# Get hot trails (frequently accessed patterns)
+hot_trails = await chroma_get_hot_trails(min_strength=0.5, limit=10)
+
+# Get code smell report
+smells = await chroma_get_code_smells()
+# Detects: excessive queries, large batches, inefficient filters
+```
+
+### Selective Encryption
+
+Automatically detect and encrypt sensitive information:
+
+```python
+# Encrypt documents based on sensitive data detection
+result = await chroma_encrypt_documents(
+    documents=["contact: john@example.com", "normal text"],
+    metadatas=[{"type": "contact"}, {"type": "note"}],
+    project_id="my_project"
+)
+# Automatically encrypts documents with emails, SSNs, API keys, etc.
+```
+
+### Entity Relationship Mapping
+
+Track entities and their relationships:
+
+```python
+# Add entities
+await chroma_add_entity(
+    entity_id="user1",
+    entity_type="User",
+    properties={"name": "Alice", "role": "admin"}
+)
+
+# Add relationships
+await chroma_add_relationship(
+    relationship_id="follows1",
+    source_id="user1",
+    target_id="user2",
+    relationship_type="FOLLOWS"
+)
+
+# Find path between entities
+path = await chroma_find_entity_path(
+    source_id="user1",
+    target_id="user5",
+    max_depth=5
+)
+
+# Get graph statistics
+stats = await chroma_get_graph_stats()
+```
+
+### Interoperability with Weaviate and Qdrant
+
+Sync data to other vector databases:
+
+```python
+# Sync to Qdrant for load balancing
+await chroma_sync_to_qdrant(
+    collection_name="my_collection",
+    documents=docs,
+    embeddings=embeddings,
+    metadatas=metas,
+    ids=ids
+)
+
+# Sync to Weaviate
+await chroma_sync_to_weaviate(
+    collection_name="my_collection",
+    documents=docs,
+    embeddings=embeddings
+)
+```
+
+### UMAP Dimensionality Reduction
+
+Visualize embeddings in 2D or 3D:
+
+```python
+# Reduce embeddings for visualization
+result = await chroma_reduce_embeddings(
+    embeddings=embeddings_list,
+    n_components=2,  # 2D for visualization
+    labels=["doc1", "doc2", "doc3"]
+)
+# Returns: coordinates for plotting
+```
+
+### Scheduled Maintenance
+
+Schedule autonomous maintenance tasks:
+
+```python
+# Schedule health checks
+await chroma_schedule_health_check(interval="every_5_minutes")
+
+# Schedule cache cleanup
+await chroma_schedule_cache_cleanup(interval="hourly")
+
+# Get scheduled jobs
+jobs = await chroma_get_scheduled_jobs()
+```
+
+## Automatic Features
+
+The following features are automatically enabled when the server starts:
+
+- **Health monitoring**: Tracks queries, inserts, errors, and system metrics
+- **Swarm tracking**: Records operation patterns and pheromone trails
+- **Code smell detection**: Analyzes operations for anti-patterns
+- **Default maintenance**: Health checks every 5 minutes, cache cleanup hourly
+- **Watchdog service**: Auto-monitors persistent database directories (when using persistent client)
+
+

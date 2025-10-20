@@ -1,4 +1,4 @@
-from typing import Dict, List, TypedDict, Union
+from typing import Dict, List, TypedDict, Union, Optional, Any
 from enum import Enum
 import chromadb
 from mcp.server.fastmcp import FastMCP
@@ -26,13 +26,26 @@ from chromadb.utils.embedding_functions import (
     RoboflowEmbeddingFunction,
 )
 
-# Import integration adapters
-from chroma_mcp.integrations import (
-    LangGraphAdapter,
-    LlamaCodexAdapter,
-    CrewAIAdapter,
-    N8NAdapter
-)
+# Import new modules
+from .cache import get_memory_cache
+from .health import get_health_monitor
+from .maintenance import get_maintenance_scheduler, get_auto_scaler
+from .security import get_encryption_manager
+from .swarm import get_swarm_tracker, get_code_smell_monitor
+from .entity_mapper import get_er_mapper
+
+# Optional imports
+try:
+    from .umap_utils import get_umap_reducer
+    UMAP_AVAILABLE = True
+except ImportError:
+    UMAP_AVAILABLE = False
+
+try:
+    from .interop import get_interop_manager
+    INTEROP_AVAILABLE = True
+except ImportError:
+    INTEROP_AVAILABLE = False
 
 # Initialize FastMCP server
 mcp = FastMCP("chroma")
@@ -365,6 +378,18 @@ async def chroma_add_documents(
     if len(ids) != len(documents):
         raise ValueError(f"Number of ids ({len(ids)}) must match number of documents ({len(documents)}).")
 
+    # Track operation with health monitor
+    monitor = get_health_monitor()
+    monitor.record_insert(collection_name)
+    
+    # Track with swarm
+    tracker = get_swarm_tracker()
+    tracker.track_operation("add", collection_name)
+    
+    # Check for code smells
+    smell_monitor = get_code_smell_monitor()
+    smell_monitor.analyze_operation("add", collection_name, {"documents": documents})
+
     client = get_chroma_client()
     try:
         collection = client.get_or_create_collection(collection_name)
@@ -398,6 +423,7 @@ async def chroma_add_documents(
         # Default return
         return f"Successfully added {len(documents)} documents to collection {collection_name}, result is {result}"
     except Exception as e:
+        monitor.record_error(str(e))
         raise Exception(f"Failed to add documents to collection '{collection_name}': {str(e)}") from e
 
 @mcp.tool()
@@ -434,6 +460,17 @@ async def chroma_query_documents(
     if not query_texts:
         raise ValueError("The 'query_texts' list cannot be empty.")
 
+    # Track operation with swarm and health monitor
+    monitor = get_health_monitor()
+    monitor.record_query(collection_name)
+    
+    tracker = get_swarm_tracker()
+    tracker.track_operation("query", collection_name, str(query_texts))
+    
+    # Check for code smells
+    smell_monitor = get_code_smell_monitor()
+    smell_monitor.analyze_operation("query", collection_name, {"n_results": n_results})
+
     client = get_chroma_client()
     try:
         collection = client.get_collection(collection_name)
@@ -445,6 +482,7 @@ async def chroma_query_documents(
             include=include
         )
     except Exception as e:
+        monitor.record_error(str(e))
         raise Exception(f"Failed to query documents from collection '{collection_name}': {str(e)}") from e
 
 @mcp.tool()
@@ -638,194 +676,248 @@ def validate_thought_data(input_data: Dict) -> Dict:
         "needsMoreThoughts": input_data.get("needsMoreThoughts"),
     }
 
-##### Integration Tools #####
+##### Advanced Features Tools #####
 
 @mcp.tool()
-async def langgraph_save_state(
-    graph_id: str,
-    state: Dict,
-    metadata: Dict | None = None
-) -> str:
-    """Save LangGraph state to Chroma for persistence.
-    
-    Args:
-        graph_id: Unique identifier for the graph
-        state: The state dictionary to save
-        metadata: Optional metadata about the state
-    """
-    client = get_chroma_client()
-    adapter = LangGraphAdapter(client)
-    try:
-        result = adapter.save_graph_state(graph_id, state, metadata)
-        return f"Successfully saved LangGraph state for graph '{graph_id}'"
-    except Exception as e:
-        raise Exception(f"Failed to save LangGraph state: {str(e)}") from e
-
-@mcp.tool()
-async def langgraph_load_state(graph_id: str) -> Dict | None:
-    """Load LangGraph state from Chroma.
-    
-    Args:
-        graph_id: The ID of the graph state to load
-    """
-    client = get_chroma_client()
-    adapter = LangGraphAdapter(client)
-    try:
-        state = adapter.load_graph_state(graph_id)
-        if state is None:
-            return {"message": f"No state found for graph '{graph_id}'"}
-        return state
-    except Exception as e:
-        raise Exception(f"Failed to load LangGraph state: {str(e)}") from e
-
-@mcp.tool()
-async def llamacodex_store_code(
-    code_id: str,
-    code: str,
-    language: str,
-    metadata: Dict | None = None
-) -> str:
-    """Store code snippet in Chroma for semantic code search.
-    
-    Args:
-        code_id: Unique identifier for the code snippet
-        code: The code content
-        language: Programming language (e.g., python, javascript, java)
-        metadata: Optional metadata (file path, author, etc.)
-    """
-    client = get_chroma_client()
-    adapter = LlamaCodexAdapter(client)
-    try:
-        result = adapter.store_code_snippet(code_id, code, language, metadata)
-        return f"Successfully stored code snippet '{code_id}' ({language})"
-    except Exception as e:
-        raise Exception(f"Failed to store code snippet: {str(e)}") from e
-
-@mcp.tool()
-async def llamacodex_search_code(
+async def chroma_cache_query(
+    collection_name: str,
     query: str,
-    language: str | None = None,
-    n_results: int = 5
-) -> List[Dict]:
-    """Search for code snippets using natural language or code queries.
-    
-    Args:
-        query: Natural language or code query
-        language: Optional language filter (e.g., python, javascript)
-        n_results: Number of results to return (default: 5)
-    """
-    client = get_chroma_client()
-    adapter = LlamaCodexAdapter(client)
-    try:
-        results = adapter.search_code(query, language, n_results)
-        return results
-    except Exception as e:
-        raise Exception(f"Failed to search code: {str(e)}") from e
-
-@mcp.tool()
-async def crewai_store_agent_memory(
-    agent_id: str,
-    memory_content: str,
-    memory_type: str = "experience",
-    metadata: Dict | None = None
+    project_id: str | None = None,
+    ttl: int | None = None
 ) -> str:
-    """Store agent memory for CrewAI agents.
+    """
+    Cache a query for passive short-term memory.
     
     Args:
-        agent_id: Unique identifier for the agent
-        memory_content: The memory content
-        memory_type: Type of memory (experience, knowledge, conversation, etc.)
-        metadata: Optional metadata
+        collection_name: Collection name
+        query: Query string to cache
+        project_id: Optional project ID for isolated caching
+        ttl: Time to live in seconds (default: 3600)
     """
-    client = get_chroma_client()
-    adapter = CrewAIAdapter(client)
-    try:
-        result = adapter.store_agent_memory(agent_id, memory_content, memory_type, metadata)
-        return f"Successfully stored memory for agent '{agent_id}' (type: {memory_type})"
-    except Exception as e:
-        raise Exception(f"Failed to store agent memory: {str(e)}") from e
+    cache = get_memory_cache()
+    result = {"cached": True, "timestamp": time.time()}
+    key = cache.cache_query_result(query, result, collection_name, project_id, ttl)
+    return f"Query cached with key: {key}"
 
 @mcp.tool()
-async def crewai_retrieve_agent_memories(
-    agent_id: str,
-    query: str | None = None,
-    memory_type: str | None = None,
-    n_results: int = 10
-) -> List[Dict]:
-    """Retrieve memories for a CrewAI agent.
+async def chroma_get_cache_stats(project_id: str | None = None) -> Dict:
+    """
+    Get cache statistics.
     
     Args:
-        agent_id: The agent identifier
-        query: Optional semantic query for memory retrieval
-        memory_type: Optional filter by memory type
-        n_results: Number of memories to retrieve (default: 10)
+        project_id: Optional project ID
     """
-    client = get_chroma_client()
-    adapter = CrewAIAdapter(client)
-    try:
-        memories = adapter.retrieve_agent_memories(agent_id, query, memory_type, n_results)
-        return memories
-    except Exception as e:
-        raise Exception(f"Failed to retrieve agent memories: {str(e)}") from e
+    cache = get_memory_cache()
+    return cache.get_stats(project_id)
 
 @mcp.tool()
-async def n8n_store_workflow_state(
-    workflow_id: str,
-    state: Dict,
-    metadata: Dict | None = None
-) -> str:
-    """Store n8n workflow state in Chroma.
-    
-    Args:
-        workflow_id: Unique workflow identifier
-        state: Workflow state data
-        metadata: Optional metadata
-    """
-    client = get_chroma_client()
-    adapter = N8NAdapter(client)
-    try:
-        result = adapter.store_workflow_state(workflow_id, state, metadata)
-        return f"Successfully stored workflow state for '{workflow_id}'"
-    except Exception as e:
-        raise Exception(f"Failed to store workflow state: {str(e)}") from e
+async def chroma_health_check() -> Dict:
+    """Get comprehensive health status of the Chroma MCP server."""
+    monitor = get_health_monitor()
+    return monitor.get_health_status()
 
 @mcp.tool()
-async def n8n_load_workflow_state(workflow_id: str) -> Dict | None:
-    """Load n8n workflow state from Chroma.
-    
-    Args:
-        workflow_id: The workflow identifier
-    """
-    client = get_chroma_client()
-    adapter = N8NAdapter(client)
-    try:
-        state = adapter.load_workflow_state(workflow_id)
-        if state is None:
-            return {"message": f"No state found for workflow '{workflow_id}'"}
-        return state
-    except Exception as e:
-        raise Exception(f"Failed to load workflow state: {str(e)}") from e
+async def chroma_get_scaling_recommendation() -> Dict:
+    """Get intelligent scaling recommendations based on current metrics."""
+    monitor = get_health_monitor()
+    scaler = get_auto_scaler()
+    metrics = monitor.get_system_metrics()
+    return scaler.analyze_and_scale(metrics)
 
 @mcp.tool()
-async def n8n_query_workflow_data(
-    query: str,
-    workflow_id: str | None = None,
-    n_results: int = 10
-) -> List[Dict]:
-    """Query workflow data using semantic search.
+async def chroma_get_hot_trails(min_strength: float = 0.5, limit: int = 10) -> List[Dict]:
+    """
+    Get hot pheromone trails (frequently accessed patterns).
     
     Args:
-        query: Query string
-        workflow_id: Optional workflow filter
-        n_results: Number of results to return (default: 10)
+        min_strength: Minimum trail strength (0.0-1.0)
+        limit: Maximum number of trails to return
     """
-    client = get_chroma_client()
-    adapter = N8NAdapter(client)
-    try:
-        results = adapter.query_workflow_data(query, workflow_id, n_results)
-        return results
-    except Exception as e:
-        raise Exception(f"Failed to query workflow data: {str(e)}") from e
+    tracker = get_swarm_tracker()
+    return tracker.get_hot_trails(min_strength, limit)
+
+@mcp.tool()
+async def chroma_get_code_smells() -> Dict:
+    """Get report of detected code smells and anti-patterns."""
+    monitor = get_code_smell_monitor()
+    return monitor.get_smell_report()
+
+@mcp.tool()
+async def chroma_encrypt_documents(
+    documents: List[str],
+    metadatas: List[Dict] | None = None,
+    project_id: str | None = None
+) -> Dict:
+    """
+    Selectively encrypt documents based on sensitive information detection.
+    
+    Args:
+        documents: List of documents to potentially encrypt
+        metadatas: Optional list of metadata dicts
+        project_id: Optional project ID
+    """
+    encryption_mgr = get_encryption_manager()
+    return encryption_mgr.batch_selective_encrypt(documents, metadatas, project_id)
+
+@mcp.tool()
+async def chroma_add_entity(
+    entity_id: str,
+    entity_type: str,
+    properties: Dict | None = None
+) -> Dict:
+    """
+    Add an entity to the relationship graph.
+    
+    Args:
+        entity_id: Unique entity ID
+        entity_type: Type of entity
+        properties: Optional entity properties
+    """
+    mapper = get_er_mapper()
+    entity = mapper.add_entity(entity_id, entity_type, properties)
+    return entity.to_dict()
+
+@mcp.tool()
+async def chroma_add_relationship(
+    relationship_id: str,
+    source_id: str,
+    target_id: str,
+    relationship_type: str,
+    properties: Dict | None = None
+) -> Dict:
+    """
+    Add a relationship between entities.
+    
+    Args:
+        relationship_id: Unique relationship ID
+        source_id: Source entity ID
+        target_id: Target entity ID
+        relationship_type: Type of relationship
+        properties: Optional relationship properties
+    """
+    mapper = get_er_mapper()
+    rel = mapper.add_relationship(relationship_id, source_id, target_id, relationship_type, properties)
+    if rel:
+        return rel.to_dict()
+    return {"error": "Failed to create relationship. Entities may not exist."}
+
+@mcp.tool()
+async def chroma_get_graph_stats() -> Dict:
+    """Get entity relationship graph statistics."""
+    mapper = get_er_mapper()
+    return mapper.get_statistics()
+
+@mcp.tool()
+async def chroma_find_entity_path(
+    source_id: str,
+    target_id: str,
+    max_depth: int = 5
+) -> Dict:
+    """
+    Find path between two entities.
+    
+    Args:
+        source_id: Source entity ID
+        target_id: Target entity ID
+        max_depth: Maximum path depth
+    """
+    mapper = get_er_mapper()
+    path = mapper.find_path(source_id, target_id, max_depth)
+    if path:
+        return {"found": True, "path": path, "length": len(path)}
+    return {"found": False, "path": None}
+
+if INTEROP_AVAILABLE:
+    @mcp.tool()
+    async def chroma_sync_to_qdrant(
+        collection_name: str,
+        documents: List[str],
+        embeddings: List[List[float]],
+        metadatas: List[Dict] | None = None,
+        ids: List[str] | None = None
+    ) -> Dict:
+        """
+        Sync data from Chroma to Qdrant for offloading.
+        
+        Args:
+            collection_name: Collection name
+            documents: List of documents
+            embeddings: List of embeddings
+            metadatas: Optional metadata
+            ids: Optional IDs
+        """
+        interop = get_interop_manager()
+        return await interop.sync_to_qdrant(collection_name, documents, embeddings, metadatas, ids)
+    
+    @mcp.tool()
+    async def chroma_sync_to_weaviate(
+        collection_name: str,
+        documents: List[str],
+        embeddings: List[List[float]],
+        metadatas: List[Dict] | None = None,
+        ids: List[str] | None = None
+    ) -> Dict:
+        """
+        Sync data from Chroma to Weaviate.
+        
+        Args:
+            collection_name: Collection name
+            documents: List of documents
+            embeddings: List of embeddings
+            metadatas: Optional metadata
+            ids: Optional IDs
+        """
+        interop = get_interop_manager()
+        return await interop.sync_to_weaviate(collection_name, documents, embeddings, metadatas, ids)
+
+if UMAP_AVAILABLE:
+    @mcp.tool()
+    async def chroma_reduce_embeddings(
+        embeddings: List[List[float]],
+        n_components: int = 2,
+        labels: List[str] | None = None
+    ) -> Dict:
+        """
+        Reduce embeddings dimensionality using UMAP for visualization.
+        
+        Args:
+            embeddings: List of embedding vectors
+            n_components: Number of dimensions (2 or 3 for visualization)
+            labels: Optional labels for each embedding
+        """
+        reducer = get_umap_reducer()
+        reducer.n_components = n_components
+        return reducer.visualize_embeddings(embeddings, labels)
+
+@mcp.tool()
+async def chroma_schedule_health_check(interval: str = "every_5_minutes") -> str:
+    """
+    Schedule periodic health checks.
+    
+    Args:
+        interval: Interval string (e.g., "every_5_minutes", "hourly", "daily")
+    """
+    scheduler = get_maintenance_scheduler()
+    job_id = scheduler.schedule_health_check(interval)
+    return f"Health check scheduled with ID: {job_id}, interval: {interval}"
+
+@mcp.tool()
+async def chroma_schedule_cache_cleanup(interval: str = "hourly") -> str:
+    """
+    Schedule periodic cache cleanup and stats logging.
+    
+    Args:
+        interval: Interval string (e.g., "hourly", "every_30_minutes", "daily")
+    """
+    scheduler = get_maintenance_scheduler()
+    job_id = scheduler.schedule_cache_cleanup(interval)
+    return f"Cache cleanup scheduled with ID: {job_id}, interval: {interval}"
+
+@mcp.tool()
+async def chroma_get_scheduled_jobs() -> List[Dict]:
+    """Get list of all scheduled maintenance jobs."""
+    scheduler = get_maintenance_scheduler()
+    return scheduler.get_scheduled_jobs()
 
 def main():
     """Entry point for the Chroma MCP server."""
@@ -858,6 +950,37 @@ def main():
     except Exception as e:
         print(f"Failed to initialize Chroma client: {str(e)}")
         raise
+    
+    # Initialize advanced features
+    print("Initializing advanced features...")
+    
+    # Start maintenance scheduler
+    scheduler = get_maintenance_scheduler()
+    scheduler.start()
+    print("Started maintenance scheduler")
+    
+    # Schedule default maintenance tasks
+    scheduler.schedule_health_check("every_5_minutes")
+    scheduler.schedule_cache_cleanup("hourly")
+    print("Scheduled default maintenance tasks: health check (5 min), cache cleanup (hourly)")
+    
+    # Initialize health monitor
+    monitor = get_health_monitor()
+    print("Initialized health monitor")
+    
+    # Initialize cache
+    cache = get_memory_cache()
+    print("Initialized memory cache")
+    
+    # Start watchdog if persistent client with data directory
+    if args.client_type == 'persistent' and args.data_dir:
+        try:
+            scheduler.start_watchdog(args.data_dir)
+            print(f"Started watchdog for {args.data_dir}")
+        except Exception as e:
+            print(f"Could not start watchdog: {e}")
+    
+    print(f"Advanced features ready: Cache, Health Monitoring, Auto-scaling, Swarm Tracking, Entity Mapping")
     
     # Initialize and run the server
     print("Starting MCP server")
